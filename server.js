@@ -46,19 +46,33 @@ app.post("/download", auth, async (req, res) => {
 
   try {
     // Download video via yt-dlp with retries (Instagram API is inconsistent)
+    const audioOnly = req.body.audioOnly !== false; // Default to audio-only
     let stdout;
     const MAX_RETRIES = 3;
     for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
       try {
-        const result = await execFileAsync("yt-dlp", [
-          "--no-playlist",
-          "-f", "mp4/best",
-          "-o", outputTemplate,
-          "--print", "filename",
-          "--no-simulate",
-          "--no-warnings",
-          url,
-        ], { timeout: 120_000 });
+        const args = audioOnly
+          ? [
+              "--no-playlist",
+              "-x",                    // Extract audio only
+              "--audio-format", "mp3", // Convert to mp3
+              "--audio-quality", "4",  // Good enough for speech
+              "-o", outputTemplate,
+              "--print", "filename",
+              "--no-simulate",
+              "--no-warnings",
+              url,
+            ]
+          : [
+              "--no-playlist",
+              "-f", "mp4/best",
+              "-o", outputTemplate,
+              "--print", "filename",
+              "--no-simulate",
+              "--no-warnings",
+              url,
+            ];
+        const result = await execFileAsync("yt-dlp", args, { timeout: 120_000 });
         stdout = result.stdout;
         break;
       } catch (err) {
@@ -74,8 +88,9 @@ app.post("/download", auth, async (req, res) => {
     await fs.access(filePath);
 
     // Stream file back and delete after
-    res.setHeader("Content-Type", "video/mp4");
-    res.setHeader("Content-Disposition", `attachment; filename="${fileId}.mp4"`);
+    const ext = audioOnly ? "mp3" : "mp4";
+    res.setHeader("Content-Type", audioOnly ? "audio/mpeg" : "video/mp4");
+    res.setHeader("Content-Disposition", `attachment; filename="${fileId}.${ext}"`);
 
     const { createReadStream } = require("fs");
     const stream = createReadStream(filePath);
