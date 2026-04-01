@@ -63,8 +63,8 @@ app.post("/download", auth, async (req, res) => {
         break;
       } catch (err) {
         if (attempt === MAX_RETRIES) throw err;
-        // Wait before retry (5s, 10s)
-        await new Promise((r) => setTimeout(r, attempt * 5000));
+        // Wait before retry (10s, 20s)
+        await new Promise((r) => setTimeout(r, attempt * 10000));
       }
     }
 
