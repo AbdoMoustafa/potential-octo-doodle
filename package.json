@@ -1,0 +1,12 @@
+{
+  "name": "railway-video-proxy",
+  "version": "1.0.0",
+  "description": "Lightweight video download proxy for Instagram reels via yt-dlp",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.0"
+  }
+}
