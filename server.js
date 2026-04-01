@@ -45,16 +45,28 @@ app.post("/download", auth, async (req, res) => {
   const outputTemplate = path.join(TMP_DIR, `${fileId}.%(ext)s`);
 
   try {
-    // Download video via yt-dlp
-    const { stdout } = await execFileAsync("yt-dlp", [
-      "--no-playlist",
-      "-f", "mp4/best",
-      "-o", outputTemplate,
-      "--print", "filename",
-      "--no-simulate",
-      "--no-warnings",
-      url,
-    ], { timeout: 120_000 }); // 2 min timeout
+    // Download video via yt-dlp with retries (Instagram API is inconsistent)
+    let stdout;
+    const MAX_RETRIES = 3;
+    for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const result = await execFileAsync("yt-dlp", [
+          "--no-playlist",
+          "-f", "mp4/best",
+          "-o", outputTemplate,
+          "--print", "filename",
+          "--no-simulate",
+          "--no-warnings",
+          url,
+        ], { timeout: 120_000 });
+        stdout = result.stdout;
+        break;
+      } catch (err) {
+        if (attempt === MAX_RETRIES) throw err;
+        // Wait before retry (5s, 10s)
+        await new Promise((r) => setTimeout(r, attempt * 5000));
+      }
+    }
 
     const filePath = stdout.trim();
 
